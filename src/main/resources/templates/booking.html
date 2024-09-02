@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seat Booking</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+        .seat {
+            width: 50px;
+            height: 50px;
+            margin: 5px;
+            border-radius: 5px;
+            text-align: center;
+            line-height: 50px;
+            cursor: pointer;
+        }
+        .available {
+            background-color: green;
+            color: white;
+        }
+        .booked {
+            background-color: red;
+            color: white;
+            cursor: not-allowed;
+        }
+        .selected {
+            background-color: orange;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+  <h2 class="text-center">Please Select Your Seat</h2>
+  <div id="seats" class="d-flex flex-wrap justify-content-center mt-3">
+    <!-- Seats will be injected here -->
+  </div>
+
+  <div id="bookingForm" class="mt-4" style="display:none;">
+    <h3>Booking Details</h3>
+    <form id="reservationForm">
+      <div class="mb-3">
+        <label for="traineeId" class="form-label">Trainee ID</label>
+        <input type="text" class="form-control" id="traineeId" required>
+      </div>
+      <div class="mb-3">
+        <label for="traineeName" class="form-label">Trainee Name</label>
+        <input type="text" class="form-control" id="traineeName" required>
+      </div>
+      <div class="mb-3">
+        <label for="groupName" class="form-label">Group Name</label>
+        <input type="text" class="form-control" id="groupName" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Book Seat</button>
+    </form>
+  </div>
+</div>
+
+<script>
+        const apiUrl = 'http://localhost:8080/api/seats'; // Adjust to your API URL
+        let selectedSeatId = null;
+
+        // Fetch seats from the API and display them
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(seats => {
+                const seatsContainer = document.getElementById('seats');
+                seats.forEach(seat => {
+                    const seatDiv = document.createElement('div');
+                    seatDiv.classList.add('seat');
+                    seatDiv.innerText = seat.seatNumber;
+                    seatDiv.dataset.id = seat.seatId;
+
+                    if (seat.booked) {
+                        seatDiv.classList.add('booked');
+                    } else {
+                        seatDiv.classList.add('available');
+                        seatDiv.addEventListener('click', () => {
+                            selectSeat(seatDiv);
+                        });
+                    }
+
+                    seatsContainer.appendChild(seatDiv);
+                });
+            });
+
+        // Handle seat selection
+        function selectSeat(seatDiv) {
+            if (selectedSeatId) {
+                document.querySelector(`[data-id="${selectedSeatId}"]`).classList.remove('selected');
+            }
+            seatDiv.classList.add('selected');
+            selectedSeatId = seatDiv.dataset.id;
+
+            document.getElementById('bookingForm').style.display = 'block';
+        }
+
+        // Handle form submission
+        document.getElementById('reservationForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const traineeId = document.getElementById('traineeId').value;
+            const traineeName = document.getElementById('traineeName').value;
+            const groupName = document.getElementById('groupName').value;
+
+            fetch(`${apiUrl}/book`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Include JWT token
+                },
+                body: JSON.stringify({
+                    seatId: selectedSeatId,
+                    traineeId: traineeId,
+                    traineeName: traineeName,
+                    groupName: groupName
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Seat booked successfully!');
+                    location.reload();
+                } else {
+                    alert('Error booking seat');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
